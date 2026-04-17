@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using GetDownloadedDumbass.Models;
@@ -16,10 +18,17 @@ namespace GetDownloadedDumbass.ViewModels
         private readonly HistoryService _history;
         private readonly SettingsService _settingsService;
 
+        // ── Cancellation ──────────────────────────────────────────
+        private CancellationTokenSource? _cts;
+
         // ── State ─────────────────────────────────────────────────
         public AppSettings Settings { get; private set; }
         public ObservableCollection<DownloadItem> Queue { get; } = new();
         public ObservableCollection<DownloadItem> History { get; } = new();
+
+        // ── ComboBox sources ──────────────────────────────────────
+        public List<string> Formats { get; } = new() { "mp4", "mkv", "mp3", "flac", "wav", "m4a" };
+        public List<string> Qualities { get; } = new() { "best", "1080p", "720p", "480p", "360p" };
 
         // ── Bound properties ──────────────────────────────────────
         private string _url = string.Empty;
@@ -60,6 +69,7 @@ namespace GetDownloadedDumbass.ViewModels
         // ── Commands ──────────────────────────────────────────────
         public ICommand AddToQueueCommand { get; }
         public ICommand StartDownloadCommand { get; }
+        public ICommand StopDownloadCommand { get; }
         public ICommand ClearHistoryCommand { get; }
         public ICommand BrowseFolderCommand { get; }
 
@@ -75,10 +85,11 @@ namespace GetDownloadedDumbass.ViewModels
             foreach (var item in _history.Load())
                 History.Add(item);
 
-            AddToQueueCommand = new RelayCommand(_ => AddToQueue(), _ => !string.IsNullOrWhiteSpace(Url));
+            AddToQueueCommand    = new RelayCommand(_ => AddToQueue(), _ => !string.IsNullOrWhiteSpace(Url));
             StartDownloadCommand = new RelayCommand(async _ => await StartDownloadAsync(), _ => Queue.Count > 0 && !IsBusy);
-            ClearHistoryCommand = new RelayCommand(_ => ClearHistory());
-            BrowseFolderCommand = new RelayCommand(_ => BrowseFolder());
+            StopDownloadCommand  = new RelayCommand(_ => StopDownload(), _ => IsBusy);
+            ClearHistoryCommand  = new RelayCommand(_ => ClearHistory());
+            BrowseFolderCommand  = new RelayCommand(_ => BrowseFolder());
         }
 
         // ── Methods ───────────────────────────────────────────────
@@ -99,9 +110,10 @@ namespace GetDownloadedDumbass.ViewModels
 
         private async Task StartDownloadAsync()
         {
+            _cts = new CancellationTokenSource();
             IsBusy = true;
 
-            while (Queue.Count > 0)
+            while (Queue.Count > 0 && !_cts.Token.IsCancellationRequested)
             {
                 var item = Queue[0];
                 StatusMessage = $"Downloading: {item.Url}";
@@ -109,7 +121,8 @@ namespace GetDownloadedDumbass.ViewModels
                 await _downloader.DownloadAsync(
                     item,
                     progress => StatusMessage = $"Progress: {progress:F0}%",
-                    error => StatusMessage = $"Error: {error}"
+                    error => StatusMessage = $"Error: {error}",
+                    _cts.Token
                 );
 
                 Queue.RemoveAt(0);
@@ -117,14 +130,22 @@ namespace GetDownloadedDumbass.ViewModels
                 History.Insert(0, item);
             }
 
-            StatusMessage = "All downloads completed";
+            StatusMessage = _cts.Token.IsCancellationRequested ? "Download stopped." : "All downloads completed";
             IsBusy = false;
+            _cts.Dispose();
+            _cts = null;
+        }
+
+        private void StopDownload()
+        {
+            _cts?.Cancel();
+            StatusMessage = "Stopping...";
         }
 
         private void ClearHistory()
         {
             History.Clear();
-            _history.Save(new System.Collections.Generic.List<DownloadItem>());
+            _history.Save(new List<DownloadItem>());
         }
 
         private void BrowseFolder()

@@ -64,21 +64,83 @@
             </Setter>
         </Style>
 
-        <!-- ComboBox style -->
+        <!-- ComboBox style sombre complet -->
         <Style x:Key="DarkCombo" TargetType="ComboBox">
             <Setter Property="Background" Value="#1A1A1A"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderBrush" Value="#333"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="10,8"/>
             <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton Focusable="False"
+                                          IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          ClickMode="Press">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border Background="#1A1A1A" BorderBrush="#333" BorderThickness="1" CornerRadius="6">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="20"/>
+                                                </Grid.ColumnDefinitions>
+                                                <ContentPresenter Grid.Column="0" Margin="10,6"/>
+                                                <Path Grid.Column="1" Data="M 0 0 L 4 4 L 8 0 Z"
+                                                      Fill="#888" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <ContentPresenter IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              Margin="10,6,24,6"
+                                              VerticalAlignment="Center">
+                                <ContentPresenter.Resources>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </Style>
+                                </ContentPresenter.Resources>
+                            </ContentPresenter>
+                            <Popup IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   Placement="Bottom" AllowsTransparency="True" Focusable="False">
+                                <Border Background="#1A1A1A" BorderBrush="#333" BorderThickness="1" CornerRadius="6">
+                                    <ScrollViewer MaxHeight="200">
+                                        <ItemsPresenter/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ComboBoxItem">
+                        <Setter Property="Foreground" Value="White"/>
+                        <Setter Property="Background" Value="#1A1A1A"/>
+                        <Setter Property="Padding" Value="10,6"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter Property="Background" Value="#FF4500"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="56"/>   <!-- Header -->
-            <RowDefinition Height="*"/>    <!-- Content -->
-            <RowDefinition Height="32"/>   <!-- Status bar -->
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- ── HEADER ── -->
@@ -95,7 +157,7 @@
                 <ColumnDefinition Width="300"/>
             </Grid.ColumnDefinitions>
 
-            <!-- LEFT : URL input + Queue + History -->
+            <!-- LEFT -->
             <Grid Grid.Column="0" Margin="0,0,12,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -117,36 +179,15 @@
                              Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}"
                              Margin="0,0,8,0"/>
 
-                    <ComboBox Grid.Column="1" Background="#1A1A1A" Foreground="White"
-                        BorderBrush="#333" Width="90" Margin="0,0,8,0"
-                        SelectedIndex="0"
-                        SelectedItem="{Binding SelectedFormat}">
-                    <ComboBox.Resources>
-                        <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="#1A1A1A"/>
-                        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#FF4500"/>
-                    </ComboBox.Resources>
-                    <ComboBoxItem Foreground="White">mp4</ComboBoxItem>
-                    <ComboBoxItem Foreground="White">mkv</ComboBoxItem>
-                    <ComboBoxItem Foreground="White">mp3</ComboBoxItem>
-                    <ComboBoxItem Foreground="White">flac</ComboBoxItem>
-                    <ComboBoxItem Foreground="White">wav</ComboBoxItem>
-                    <ComboBoxItem Foreground="White">m4a</ComboBoxItem>
-                </ComboBox>
+                    <ComboBox Grid.Column="1" Width="90" Margin="0,0,8,0"
+                              Style="{StaticResource DarkCombo}"
+                              ItemsSource="{Binding Formats}"
+                              SelectedItem="{Binding SelectedFormat}"/>
 
-                <ComboBox Grid.Column="2" Background="#1A1A1A" Foreground="White"
-                        BorderBrush="#333" Width="100" Margin="0,0,8,0"
-                        SelectedIndex="0"
-                        SelectedItem="{Binding SelectedQuality}">
-                    <ComboBox.Resources>
-                        <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="#1A1A1A"/>
-                        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#FF4500"/>
-                    </ComboBox.Resources>
-                    <ComboBoxItem Foreground="White">best</ComboBoxItem>
-                    <ComboBoxItem Foreground="White">1080p</ComboBoxItem>
-                    <ComboBoxItem Foreground="White">720p</ComboBoxItem>
-                    <ComboBoxItem Foreground="White">480p</ComboBoxItem>
-                    <ComboBoxItem Foreground="White">360p</ComboBoxItem>
-                </ComboBox>
+                    <ComboBox Grid.Column="2" Width="100" Margin="0,0,8,0"
+                              Style="{StaticResource DarkCombo}"
+                              ItemsSource="{Binding Qualities}"
+                              SelectedItem="{Binding SelectedQuality}"/>
 
                     <Button Grid.Column="3" Content="+ Add"
                             Style="{StaticResource GradientButton}"
@@ -234,22 +275,24 @@
                 </Border>
             </Grid>
 
-            <!-- RIGHT : Download button + output folder -->
+            <!-- RIGHT -->
             <Grid Grid.Column="1">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-
-                <!-- Download button -->
                 <Button Grid.Row="0" Content="▶  START DOWNLOAD"
-                        Style="{StaticResource GradientButton}"
-                        FontSize="15" Padding="0,16"
-                        Command="{Binding StartDownloadCommand}"
-                        Margin="0,0,0,16"/>
+                    Style="{StaticResource GradientButton}"
+                    FontSize="15" Padding="0,16"
+                    Command="{Binding StartDownloadCommand}"
+                    Margin="0,0,0,8"/>
 
-                <!-- Output folder -->
+                <Button Grid.Row="1" Content="⏹  STOP"
+                        Style="{StaticResource GradientButton}"
+                        FontSize="15" Padding="0,12"
+                        Command="{Binding StopDownloadCommand}"
+                        Margin="0,0,0,16"/>
                 <Border Grid.Row="1" Background="#111" CornerRadius="8" Padding="12" Margin="0,0,0,12">
                     <StackPanel>
                         <TextBlock Text="OUTPUT FOLDER" Foreground="#555" FontSize="11" FontWeight="Bold" Margin="0,0,0,8"/>
@@ -261,7 +304,6 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Busy indicator -->
                 <Border Grid.Row="2" Background="#111" CornerRadius="8" Padding="12">
                     <StackPanel>
                         <TextBlock Text="STATUS" Foreground="#555" FontSize="11" FontWeight="Bold" Margin="0,0,0,8"/>

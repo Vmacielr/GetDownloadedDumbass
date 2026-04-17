@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using GetDownloadedDumbass.Models;
 
@@ -16,7 +17,7 @@ namespace GetDownloadedDumbass.Services
             _ffmpegPath = ffmpegPath;
         }
 
-        public async Task DownloadAsync(DownloadItem item, Action<double> onProgress, Action<string> onError)
+        public async Task DownloadAsync(DownloadItem item, Action<double> onProgress, Action<string> onError, CancellationToken ct = default)
         {
             try
             {
@@ -24,11 +25,11 @@ namespace GetDownloadedDumbass.Services
 
                 string formatArg = item.Format switch
                 {
-                    "mp3" => "-x --audio-format mp3",
+                    "mp3"  => "-x --audio-format mp3",
                     "flac" => "-x --audio-format flac",
-                    "wav" => "-x --audio-format wav",
-                    "m4a" => "-x --audio-format m4a",
-                    _ => $"-f \"bestvideo[height<={GetHeight(item.Quality)}]+bestaudio/best\" --merge-output-format {item.Format}"
+                    "wav"  => "-x --audio-format wav",
+                    "m4a"  => "-x --audio-format m4a",
+                    _      => $"-f \"bestvideo[height<={GetHeight(item.Quality)}]+bestaudio/best\" --merge-output-format {item.Format}"
                 };
 
                 string args = $"{formatArg} " +
@@ -47,46 +48,66 @@ namespace GetDownloadedDumbass.Services
                         RedirectStandardError = true,
                         UseShellExecute = false,
                         CreateNoWindow = true
-                    }
+                    },
+                    EnableRaisingEvents = true
                 };
 
                 process.Start();
 
-                while (!process.StandardOutput.EndOfStream)
+                // Kill le process si annulation
+                ct.Register(() =>
                 {
-                    string? line = await process.StandardOutput.ReadLineAsync();
-                    if (line == null) continue;
+                    try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
+                    catch { }
+                });
+
+                var stderrTask = process.StandardError.ReadToEndAsync();
+
+                string? line;
+                while ((line = await process.StandardOutput.ReadLineAsync()) != null)
+                {
+                    if (ct.IsCancellationRequested) break;
 
                     if (line.Contains("[download]") && line.Contains("%"))
                     {
                         double progress = ParseProgress(line);
                         item.Progress = progress;
-                        onProgress(progress);
+                        System.Windows.Application.Current.Dispatcher.Invoke(() => onProgress(progress));
                     }
                 }
 
                 await process.WaitForExitAsync();
+                string stderr = await stderrTask;
 
-                if (process.ExitCode == 0)
+                if (ct.IsCancellationRequested)
+                {
+                    item.Status = DownloadStatus.Failed;
+                    item.ErrorMessage = "Cancelled";
+                }
+                else if (process.ExitCode == 0)
                 {
                     item.Status = DownloadStatus.Completed;
                     item.CompletedAt = DateTime.Now;
                     item.Progress = 100;
-                    onProgress(100);
+                    System.Windows.Application.Current.Dispatcher.Invoke(() => onProgress(100));
                 }
                 else
                 {
-                    string error = await process.StandardError.ReadToEndAsync();
                     item.Status = DownloadStatus.Failed;
-                    item.ErrorMessage = error;
-                    onError(error);
+                    item.ErrorMessage = stderr;
+                    System.Windows.Application.Current.Dispatcher.Invoke(() => onError(stderr));
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                item.Status = DownloadStatus.Failed;
+                item.ErrorMessage = "Cancelled";
             }
             catch (Exception ex)
             {
                 item.Status = DownloadStatus.Failed;
                 item.ErrorMessage = ex.Message;
-                onError(ex.Message);
+                System.Windows.Application.Current.Dispatcher.Invoke(() => onError(ex.Message));
             }
         }
 
@@ -107,7 +128,7 @@ namespace GetDownloadedDumbass.Services
                 };
 
                 process.Start();
-                string title = await process.StandardOutput.ReadLineAsync() ?? "Unknown Title";
+                string title     = await process.StandardOutput.ReadLineAsync() ?? "Unknown Title";
                 string thumbnail = await process.StandardOutput.ReadLineAsync() ?? string.Empty;
                 await process.WaitForExitAsync();
 
@@ -124,7 +145,7 @@ namespace GetDownloadedDumbass.Services
             try
             {
                 int start = line.IndexOf(' ') + 1;
-                int end = line.IndexOf('%');
+                int end   = line.IndexOf('%');
                 if (end > start)
                 {
                     string percent = line.Substring(start, end - start).Trim();
@@ -135,16 +156,13 @@ namespace GetDownloadedDumbass.Services
             return 0;
         }
 
-        private static string GetHeight(string quality)
+        private static string GetHeight(string quality) => quality switch
         {
-            return quality switch
-            {
-                "1080p" => "1080",
-                "720p" => "720",
-                "480p" => "480",
-                "360p" => "360",
-                _ => "9999"
-            };
-        }
+            "1080p" => "1080",
+            "720p"  => "720",
+            "480p"  => "480",
+            "360p"  => "360",
+            _       => "9999"
+        };
     }
 }
