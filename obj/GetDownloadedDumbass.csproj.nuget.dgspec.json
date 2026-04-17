@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\adrie\\Bureau\\projet\\GDD\\GetDownloadedDumbass\\GetDownloadedDumbass\\GetDownloadedDumbass.csproj": {}
+    "C:\\Users\\adrie\\Bureau\\projet\\GDD\\GetDownloadedDumbass.csproj": {}
   },
   "projects": {
-    "C:\\Users\\adrie\\Bureau\\projet\\GDD\\GetDownloadedDumbass\\GetDownloadedDumbass\\GetDownloadedDumbass.csproj": {
+    "C:\\Users\\adrie\\Bureau\\projet\\GDD\\GetDownloadedDumbass.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\adrie\\Bureau\\projet\\GDD\\GetDownloadedDumbass\\GetDownloadedDumbass\\GetDownloadedDumbass.csproj",
+        "projectUniqueName": "C:\\Users\\adrie\\Bureau\\projet\\GDD\\GetDownloadedDumbass.csproj",
         "projectName": "GetDownloadedDumbass",
-        "projectPath": "C:\\Users\\adrie\\Bureau\\projet\\GDD\\GetDownloadedDumbass\\GetDownloadedDumbass\\GetDownloadedDumbass.csproj",
+        "projectPath": "C:\\Users\\adrie\\Bureau\\projet\\GDD\\GetDownloadedDumbass.csproj",
         "packagesPath": "C:\\Users\\adrie\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\adrie\\Bureau\\projet\\GDD\\GetDownloadedDumbass\\GetDownloadedDumbass\\obj\\",
+        "outputPath": "C:\\Users\\adrie\\Bureau\\projet\\GDD\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\adrie\\AppData\\Roaming\\NuGet\\NuGet.Config",
