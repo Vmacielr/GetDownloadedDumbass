@@ -5,6 +5,7 @@ obj/
 .vs/
 config.json
 options.json
+history.json
 Assets/yt-dlp.exe
 Assets/ffmpeg.exe
 .DS_Store
